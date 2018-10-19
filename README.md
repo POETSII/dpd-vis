@@ -19,13 +19,13 @@ During playback the (toroidal) 3D space can be rotated, moved around, and dynami
 ## usage
 Interfacing with the visualiser is done via a UNIX pipe and JSON files, for example:
 ```bash
-./yoursim | nodejs dpdvis/visualiser.js
+./yoursim | nodejs dpd-vis/visualiser.js
 ```
-Where `yoursim` is a dpd simulator and `dpdvis/visualiser.js` is the visualiser from this repo.
-Along the unix pipe a stdout message `"u"` indicates that a new JSON state file is ready to read to update the visualiser with new particle positions. This JSON file needs to conform to the format described below.  
+Where `yoursim` is a dpd simulator and `dpd-vis/visualiser.js` is the visualiser from this repo.
+Along the unix pipe a stdout message `"u"` indicates that a new JSON state file is ready to read to update the visualiser with new bead positions. This JSON file needs to conform to the format described below.  
 
 ### JSON format
-This JSON file captures the state of the simulation at any given moment in time. To do this it needs to describe, the id, the position <x,y,z> of each particle, the velocity of each particle <vx,vy,vz>, and the type of each particle (for colouring). The current JSON format looks like the following:
+This JSON file captures the state of the simulation at any given moment in time. To do this it needs to describe, each bead `id`, the position `<x,y,z>` of each bead, the velocity of each bead `<vx,vy,vz>`, and the `type` of each bead (for colouring). The current JSON format looks like the following:
 
 ```json
 {
