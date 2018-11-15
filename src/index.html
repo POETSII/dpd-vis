@@ -48,10 +48,10 @@
             var tmp = getNewData("_frames/state_"+cur_replay+".json");
             for(var i=0; i<tmp.length; i++) {
                 for(var j=0; j<data.length; j++){
-                   if(data[i].id == tmp[i].id) {
-                      data[i].x = Math.round(tmp[i].x);
-                      data[i].y = Math.round(tmp[i].y);
-                      data[i].z = Math.round(tmp[i].z);
+                   if(data[i].id == tmp[j].id) {
+                      data[i].x = Math.round(tmp[j].x);
+                      data[i].y = Math.round(tmp[j].y);
+                      data[i].z = Math.round(tmp[j].z);
                    }
                 }
             }
