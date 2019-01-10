@@ -46,8 +46,8 @@
     replay = true;
        let replayTimer = setTimeout(function showFrame(){
             var tmp = getNewData("_frames/state_"+cur_replay+".json");
-            for(var i=0; i<tmp.length; i++) {
-                for(var j=0; j<data.length; j++){
+            for(var i=0; i<data.length; i++) {
+                for(var j=0; j<tmp.length; j++){
                    if(data[i].id == tmp[j].id) {
                       data[i].x = Math.round(tmp[j].x);
                       data[i].y = Math.round(tmp[j].y);
@@ -167,8 +167,8 @@
         if(!replay) {
             if(evt.data == "u") {
                 var tmp = getNewData("state.json");
-                for(var i=0; i<tmp.length; i++) {
-                    for(var j=0; j<data.length; j++){
+                for(var i=0; i<data.length; i++) {
+                    for(var j=0; j<tmp.length; j++){
                        if(data[i].id == tmp[j].id) {
                           data[i].x = Math.round(tmp[j].x);
                           data[i].y = Math.round(tmp[j].y);
