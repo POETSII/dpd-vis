@@ -21,7 +21,8 @@
 <script>
 
     var data    = [], min = max = 500;
-    var origin  = [450, 520], startAngle = Math.PI/8, beta = startAngle;
+    //var origin  = [450, 520], startAngle = Math.PI/8, beta = startAngle;
+    var origin  = [450, 720], startAngle = 0, beta = startAngle;
     var svg     = d3.select('svg').call(d3.drag().on('drag', dragged).on('start', dragStart).on('end', dragEnd)).append('g');
     var color   = d3.scaleOrdinal(d3.schemeCategory10);
     var rn      = function(min, max){ return Math.round(d3.randomUniform(min, max+1)()); };
