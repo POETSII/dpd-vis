@@ -22,15 +22,21 @@
     // -----------------------------------------------
     //     edit these parameters
     // -----------------------------------------------
-    var outHeight = 600; // size of the displayed image (square outHeight x outHeight)
+    var outHeight = 800; // size of the displayed image (square outHeight x outHeight)
     var simSize = 75.0; // size of the simulation simSize x simSize
-    var beadSize = 4; // size of each rendered bead
+    var beadSize = 3; // size of each rendered bead
     var frameDelay = 10; // How many miliseconds to wait between frame playback
     // -----------------------------------------------
 
     var color   = d3.scaleOrdinal(d3.schemeCategory10);
     var sPos    = d3.scaleLinear().domain([0.0,simSize]).range([0,outHeight]);
     var svg     = d3.select('svg');
+
+    // add background rect
+    svg.append("rect")
+       .attr("height", outHeight)
+       .attr("width", outHeight)
+       .attr("fill", "#A9A9A9");
 
     // global variable for tracking if we are in a replay mode
     var replay = false;
@@ -48,7 +54,7 @@
 
     function updateFrame(datain){
         updating = true;
-        svg.selectAll("*").remove();
+        svg.selectAll("circle").remove();
         var circles = svg.selectAll("circle")
                          .data(datain)
                          .enter()
@@ -56,7 +62,7 @@
                          .attr("cx", function(d) { return sPos(d.x); }) 
                          .attr("cy", function(d) { return sPos(d.y); }) 
                          .attr("r", beadSize) 
-                         .attr("stroke",function(d) { return d3.color(color(d.type)).darker(0.5); }) 
+                         .attr("stroke",function(d) { return d3.color(color(d.type)).darker(0.95); }) 
                          .attr("fill", function(d) { return color(d.type); });
         updating = false;
     }
