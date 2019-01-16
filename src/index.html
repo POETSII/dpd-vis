@@ -17,23 +17,94 @@
      <input type="text" id="replay_framerate" placeholder="framerate">
 </form>
 
-<svg width="800" height="800"></svg>
+<svg width="1900" height="1200"></svg>
 <script>
-    // -----------------------------------------------
-    //     edit these parameters
-    // -----------------------------------------------
-    var outHeight = 800; // size of the displayed image (square outHeight x outHeight)
-    var simSize = 75.0; // size of the simulation simSize x simSize
-    var beadSize = 3; // size of each rendered bead
-    var frameDelay = 1; // How many miliseconds to wait between frame playback
-    // -----------------------------------------------
 
+    var data    = [], min = max = 500;
+    //var origin  = [450, 520], startAngle = Math.PI/8, beta = startAngle;
+    var origin  = [450, 520], startAngle = 0, beta = startAngle;
+    //var origin  = [450, 720], startAngle = 0, beta = startAngle;
+    var svg     = d3.select('svg').call(d3.drag().on('drag', dragged).on('start', dragStart).on('end', dragEnd)).append('g');
     var color   = d3.scaleOrdinal(d3.schemeCategory10);
-    var sPos    = d3.scaleLinear().domain([0.0,simSize]).range([0,outHeight]);
-    var svg     = d3.select('svg');
-
-    // global variable for tracking if we are in a replay mode
+    var rn      = function(min, max){ return Math.round(d3.randomUniform(min, max+1)()); };
+    var mx, mouseX;
+    var filter_list = [ ]; // list of beads that we don't want shown
     var replay = false;
+
+   // functions and variables for getting the current update count (for replaying and resuming experiments)
+   function getUpdateCnt(jsonfile) {
+       var request = new XMLHttpRequest();
+       request.open("GET", jsonfile, false);
+       request.send(null)
+       var JSON_object = JSON.parse(request.responseText);
+       return JSON_object.num_frames;
+   }
+   var update_cnt = getUpdateCnt('./meta.json');
+
+   // functions that replays the simulation up until this point
+   function replayFrames() {
+    var framerate = parseInt(document.getElementById("replay_framerate").value);
+    var cur_replay = 1;
+    replay = true;
+       let replayTimer = setTimeout(function showFrame(){
+            var tmp = getNewData("_frames/state_"+cur_replay+".json");
+            for(var i=0; i<data.length; i++) {
+                for(var j=0; j<tmp.length; j++){
+                   if(data[i].id == tmp[j].id) {
+                      data[i].x = Math.round(tmp[j].x);
+                      data[i].y = Math.round(tmp[j].y);
+                      data[i].z = Math.round(tmp[j].z);
+                   }
+                }
+            }
+            data3D = _3d(data);
+            processData(data3D);
+
+            cur_replay = cur_replay + framerate;
+            if(cur_replay < update_cnt) {
+                replayTimer = setTimeout(showFrame, 50);
+            } else {
+              replay = false;
+            } 
+
+        }, 30);
+   }
+
+   // function used to filter a bead type
+   function filterBeads(event) {
+     var filter_id = document.getElementById("filter_id").value;
+     var i = filter_list.length;
+     while(i--) {
+        if(filter_id == filter_list[i]) {
+           console.log("removing filter for particle type "+filter_id);
+           filter_list.splice(i, 1);
+           renderFilterList(filter_id);
+           processData(data);
+           return;
+        }
+     }
+     console.log("Adding filter for particle type "+ filter_id);
+     filter_list.push(filter_id);
+     renderFilterList();
+     processData(data);
+     return;
+   }
+
+   // maintains a list of currently active filters on the page
+   function renderFilterList(filter_id){
+      // clear the text
+      d3.select("p").text("");
+      // create filter text string
+      var filter_string = "";
+      if(filter_list.length != 0) {
+         filter_string = "Filtering: ";
+      }
+      for(var i=0; i<filter_list.length; i++) {
+         filter_string = filter_string + " " + filter_list[i];
+      }
+      var p = d3.select("p")
+                .text(filter_string);
+   }
 
     function getNewData(jsonfile) {
         p_pos = [];
@@ -42,70 +113,121 @@
         request.send(null)
         var JSON_object = JSON.parse(request.responseText);
         var particles = JSON_object.beads;
-        return particles;
+        for(var i = 0; i<particles.length; i++) {
+            p_pos.push({
+               x: Math.round(particles[i].x*100.0) - max,
+               y: Math.round(particles[i].y*100.0) - max,
+               z: Math.round(particles[i].z*100.0) - max,
+               id: particles[i].id,
+               type: particles[i].type
+             });
+             //console.log(data[i]);
+        }
+        return p_pos;
     }
 
-    function updateFrame(datain){
-        //svg.selectAll('circle').remove();
-        svg.selectAll("*").remove();
-        var circles = svg.selectAll("circle")
-                         .data(datain)
-                         .enter()
-                         .append("circle")
-                         .attr("cx", function(d) { return sPos(d.x); }) 
-                         .attr("cy", function(d) { return sPos(d.y); }) 
-                         .attr("r", beadSize) 
-                         .attr("fill", function(d) { return color(d.type); });
+    // beadFiltered(beadId) this returns true if the bead ID is in the filter list
+    function beadFilter(bead_type){
+      for(var i=0; i<filter_list.length; i++) {
+           if(bead_type == filter_list[i])
+              return true;
+      } 
+      return false;
     }
-
-   function getUpdateCnt(jsonfile) {
-       var request = new XMLHttpRequest();
-       request.open("GET", jsonfile, false);
-       request.send(null)
-       var JSON_object = JSON.parse(request.responseText);
-       return JSON_object.num_frames;
-   }
-
-   var update_cnt = getUpdateCnt('./meta.json');
-
-   function replayFrames() {
-     var framerate = parseInt(document.getElementById("replay_framerate").value);
-     var cur_replay = 1;
-     replay = true;
-     
-     // the timer function that steps through the frames
-     let replayTimer = setTimeout(function showFrame(){
-         var tmp = getNewData("_frames/state_"+cur_replay+".json");
-         updateFrame(tmp);      
-         cur_replay = cur_replay + framerate;
-         if(cur_replay < update_cnt) {
-             replayTimer = setTimeout(showFrame, frameDelay);
-         } else {
-           replay = false;
-         } 
-     }, 1);
-     
-   }
 
     data = getNewData("state.json");
-    updateFrame(data);
+
+    var universe_scale=2.0;
+    var bead_scale=1.5;
+
+    var _3d = d3._3d()
+        .scale(1/universe_scale)
+        .origin(origin)
+        .rotateX(startAngle)
+        .rotateY(startAngle)
+        .primitiveType('POINTS');
+
+
+    var data3D  = _3d(data);
+    var extentZ = d3.extent(data3D, function(d){ return d.rotated.z });
+    var zScale  = d3.scaleLinear().domain([extentZ[1]+10, extentZ[0]-10]).range([1, 8]);
+
+    // ------------------- auto rotate -------------------------
+    // code to slowly rotate the cube of particles
+    //var autorotate = setInterval( autorotater, 20 ); // rotate it a bit every 250ms?
+    function autorotater() {
+        beta -= 0.001;
+        processData(_3d.rotateY(beta + startAngle)(data));
+    } 
+
 
     // ---------------------- web sockets ----------------------
     const socket = new WebSocket('ws://localhost:8079');
 
     socket.onmessage = function (evt) {
-       if(!replay) {
-         if(evt.data == "u") {
+        // update the particle position
+        if(!replay) {
+            if(evt.data == "u") {
                 var tmp = getNewData("state.json");
-                updateFrame(tmp);
+                for(var i=0; i<data.length; i++) {
+                    for(var j=0; j<tmp.length; j++){
+                       if(data[i].id == tmp[j].id) {
+                          data[i].x = Math.round(tmp[j].x);
+                          data[i].y = Math.round(tmp[j].y);
+                          data[i].z = Math.round(tmp[j].z);
+                       }
+                    }
+                }
+                data3D = _3d(data);
+                processData(data3D);
                 update_cnt=update_cnt+1;
-        } else {
-           console.log("Warning: we recvd a command other than update: "+evt.data);
-        }
-      }
+            } else {
+              console.log("Warning: we recvd a command other than update: "+evt.data);
+            }
+         }
     }
 
     // ---------------------- /web sockets ----------------------
 
+
+    function dragStart(){
+        mx = d3.event.x;
+    }
+
+    function dragged(){
+        mouseX = mouseX || 0;
+        beta   = (d3.event.x - mx + mouseX) * Math.PI / 360 * (-1);
+        processData(_3d.rotateY(beta + startAngle)(data));
+    }
+
+    function dragEnd(){
+        mouseX = d3.event.x - mx + mouseX;
+    }
+
+    function processData(data){
+
+        var points = svg.selectAll('circle').data(data);
+
+        points
+            .enter()
+            .append('circle')
+            .merge(points)
+            .attr('fill',   function(d, i){  
+                                           if(beadFilter(d.type)) {
+                                             return "none";
+                                            } else {
+                                             return color(d.type); 
+                                            }
+                                           })
+            .attr('stroke', function(d, i){ return d3.color(color(d.type)).darker(0.5); })
+            .sort(function(a, b){    return d3.descending(a.rotated.z, b.rotated.z); })
+            .attr('cx', function(d){ return d.projected.x; })
+            .attr('cy', function(d){ return d.projected.y; })
+            .attr('r' , function(d){ return 2.22*bead_scale*zScale(d.rotated.z); });
+
+        points.exit().remove();
+    }
+
+    processData(data3D);
 </script>
 </body>
