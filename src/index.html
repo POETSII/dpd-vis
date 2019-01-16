@@ -22,10 +22,10 @@
     // -----------------------------------------------
     //     edit these parameters
     // -----------------------------------------------
-    var outHeight = 800; // size of the displayed image (square outHeight x outHeight)
+    var outHeight = 600; // size of the displayed image (square outHeight x outHeight)
     var simSize = 75.0; // size of the simulation simSize x simSize
-    var beadSize = 3; // size of each rendered bead
-    var frameDelay = 1; // How many miliseconds to wait between frame playback
+    var beadSize = 4; // size of each rendered bead
+    var frameDelay = 10; // How many miliseconds to wait between frame playback
     // -----------------------------------------------
 
     var color   = d3.scaleOrdinal(d3.schemeCategory10);
@@ -34,6 +34,7 @@
 
     // global variable for tracking if we are in a replay mode
     var replay = false;
+    var updating = false;
 
     function getNewData(jsonfile) {
         p_pos = [];
@@ -46,7 +47,7 @@
     }
 
     function updateFrame(datain){
-        //svg.selectAll('circle').remove();
+        updating = true;
         svg.selectAll("*").remove();
         var circles = svg.selectAll("circle")
                          .data(datain)
@@ -55,7 +56,9 @@
                          .attr("cx", function(d) { return sPos(d.x); }) 
                          .attr("cy", function(d) { return sPos(d.y); }) 
                          .attr("r", beadSize) 
+                         .attr("stroke",function(d) { return d3.color(color(d.type)).darker(0.5); }) 
                          .attr("fill", function(d) { return color(d.type); });
+        updating = false;
     }
 
    function getUpdateCnt(jsonfile) {
@@ -95,13 +98,15 @@
 
     socket.onmessage = function (evt) {
        if(!replay) {
-         if(evt.data == "u") {
-                var tmp = getNewData("state.json");
-                updateFrame(tmp);
-                update_cnt=update_cnt+1;
-        } else {
-           console.log("Warning: we recvd a command other than update: "+evt.data);
-        }
+         if(!updating) {
+             if(evt.data == "u") {
+                    var tmp = getNewData("state.json");
+                    updateFrame(tmp);
+                    update_cnt=update_cnt+1;
+              } else {
+               console.log("Warning: we recvd a command other than update: "+evt.data);
+             }
+          }
       }
     }
 
