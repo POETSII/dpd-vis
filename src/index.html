@@ -20,6 +20,7 @@
 <svg width="1900" height="1200"></svg>
 <script>
 
+    var emit_rate = 5; // how many timesteps until a frame is emitted
     var replay_rate = 1;
     var replay = false;
     var data    = [], min = max = 500;
@@ -43,7 +44,7 @@
 
     // displays the current timestep being displayed
     var timestepText = svg.append("text").attr("x", 10).attr("id", "timestepText")
-                        .attr("y", 50).text("Timestep: "+update_cnt)
+                        .attr("y", 50).text("Timestep: "+(update_cnt*emit_rate))
                         .attr("font-family", "sans-serif").attr("font-size", "20px");
 
    // functions and variables for getting the current update count (for replaying and resuming experiments)
@@ -67,7 +68,7 @@
                 data3D = _3d(tmp);
                 data = tmp;
                 processData(data3D);
-                d3.select("#timestepText").text("Timestep: " + cur_replay);
+                d3.select("#timestepText").text("Timestep: " + (cur_replay*emit_rate));
 
                 cur_replay = cur_replay + framerate;
                 if(cur_replay < update_cnt) {
@@ -186,7 +187,7 @@
                 data3D = _3d(tmp);
                 processData(data3D);
                 update_cnt=update_cnt+1;
-                d3.select("#timestepText").text("Timestep: " + update_cnt);
+                d3.select("#timestepText").text("Timestep: " + (update_cnt*emit_rate));
             } else {
               console.log("Warning: we recvd a command other than update: "+evt.data);
             }
