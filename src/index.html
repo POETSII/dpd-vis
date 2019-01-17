@@ -67,7 +67,7 @@
                 data3D = _3d(tmp);
                 data = tmp;
                 processData(data3D);
-                d3.select("#timestepText").text("Timestep = " + cur_replay);
+                d3.select("#timestepText").text("Timestep: " + cur_replay);
 
                 cur_replay = cur_replay + framerate;
                 if(cur_replay < update_cnt) {
