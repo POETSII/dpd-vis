@@ -217,6 +217,13 @@
                                              return color(d.type); 
                                             }
                                            })
+            .attr('opacity',   function(d, i){  
+                                           if(beadFilter(d.type)) {
+                                             return 0.35;
+                                            } else {
+                                             return 1.0; 
+                                            }
+                                           })
             .attr('stroke', function(d, i){ return d3.color(color(d.type)).darker(0.5); })
             .sort(function(a, b){    return d3.descending(a.rotated.z, b.rotated.z); })
             .attr('cx', function(d){ return d.projected.x; })
