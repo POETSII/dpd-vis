@@ -12,7 +12,7 @@
 
 <p id="cur_filters_text">  </p>
 
-<form name="filter_input">
+<form name="replay_input">
      <input value="Replay"  type="button" onclick="replayFrames()" >
      <input type="text" id="replay_framerate" placeholder="framerate">
 </form>
@@ -50,16 +50,7 @@
          let replayTimer = setTimeout(function showFrame(){
               if(replay){
                 var tmp = getNewData("_frames/state_"+cur_replay+".json");
-                for(var i=0; i<data.length; i++) {
-                    for(var j=0; j<tmp.length; j++){
-                       if(data[i].id == tmp[j].id) {
-                          data[i].x = Math.round(tmp[j].x);
-                          data[i].y = Math.round(tmp[j].y);
-                          data[i].z = Math.round(tmp[j].z);
-                       }
-                    }
-                }
-                data3D = _3d(data);
+                data3D = _3d(tmp);
                 processData(data3D);
 
                 cur_replay = cur_replay + framerate;
@@ -69,7 +60,7 @@
                   replay = false;
                 } 
               }
-          }, 30);
+          }, 1);
     } else {
       // cancel the current replay
       cur_replay = update_cnt;
@@ -176,16 +167,7 @@
         if(!replay) {
             if(evt.data == "u") {
                 var tmp = getNewData("state.json");
-                for(var i=0; i<data.length; i++) {
-                    for(var j=0; j<tmp.length; j++){
-                       if(data[i].id == tmp[j].id) {
-                          data[i].x = Math.round(tmp[j].x);
-                          data[i].y = Math.round(tmp[j].y);
-                          data[i].z = Math.round(tmp[j].z);
-                       }
-                    }
-                }
-                data3D = _3d(data);
+                data3D = _3d(tmp);
                 processData(data3D);
                 update_cnt=update_cnt+1;
             } else {
