@@ -10,7 +10,7 @@
      <input type="text" id="filter_id" placeholder="particle ID to filter&hellip;">
 </form>
 
-<p id="cur_filters_text">  </p>
+<p id="spacer">  </p> 
 
 <form name="replay_input">
      <input value="Replay"  type="button" onclick="replayFrames()" >
@@ -33,6 +33,11 @@
     var rn      = function(min, max){ return Math.round(d3.randomUniform(min, max+1)()); };
     var mx, mouseX;
     var filter_list = [ ]; // list of beads that we don't want shown
+
+    // text for the current filter list
+    var filterText = svg.append("text").attr("x", 10).attr("id", "filterText")
+                        .attr("y", 50).text("")
+                        .attr("font-family", "sans-serif").attr("font-size", "20px");
 
    // functions and variables for getting the current update count (for replaying and resuming experiments)
    function getUpdateCnt(jsonfile) {
@@ -96,7 +101,7 @@
    // maintains a list of currently active filters on the page
    function renderFilterList(filter_id){
       // clear the text
-      d3.select("p").text("");
+      d3.select("#filterText").text("");
       // create filter text string
       var filter_string = "";
       if(filter_list.length != 0) {
@@ -105,7 +110,7 @@
       for(var i=0; i<filter_list.length; i++) {
          filter_string = filter_string + " " + filter_list[i];
       }
-      var p = d3.select("p")
+      var p = d3.select("#filterText")
                 .text(filter_string);
    }
 
