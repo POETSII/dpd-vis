@@ -43,31 +43,38 @@
 
    // functions that replays the simulation up until this point
    function replayFrames() {
-    var framerate = parseInt(document.getElementById("replay_framerate").value);
-    var cur_replay = 1;
-    replay = true;
-       let replayTimer = setTimeout(function showFrame(){
-            var tmp = getNewData("_frames/state_"+cur_replay+".json");
-            for(var i=0; i<data.length; i++) {
-                for(var j=0; j<tmp.length; j++){
-                   if(data[i].id == tmp[j].id) {
-                      data[i].x = Math.round(tmp[j].x);
-                      data[i].y = Math.round(tmp[j].y);
-                      data[i].z = Math.round(tmp[j].z);
-                   }
+    if(!replay) {
+      var framerate = parseInt(document.getElementById("replay_framerate").value);
+      var cur_replay = 1;
+      replay = true;
+         let replayTimer = setTimeout(function showFrame(){
+              if(replay){
+                var tmp = getNewData("_frames/state_"+cur_replay+".json");
+                for(var i=0; i<data.length; i++) {
+                    for(var j=0; j<tmp.length; j++){
+                       if(data[i].id == tmp[j].id) {
+                          data[i].x = Math.round(tmp[j].x);
+                          data[i].y = Math.round(tmp[j].y);
+                          data[i].z = Math.round(tmp[j].z);
+                       }
+                    }
                 }
-            }
-            data3D = _3d(data);
-            processData(data3D);
+                data3D = _3d(data);
+                processData(data3D);
 
-            cur_replay = cur_replay + framerate;
-            if(cur_replay < update_cnt) {
-                replayTimer = setTimeout(showFrame, 50);
-            } else {
-              replay = false;
-            } 
-
-        }, 30);
+                cur_replay = cur_replay + framerate;
+                if(cur_replay < update_cnt) {
+                    replayTimer = setTimeout(showFrame, 50);
+                } else {
+                  replay = false;
+                } 
+              }
+          }, 30);
+    } else {
+      // cancel the current replay
+      cur_replay = update_cnt;
+      replay = false;
+    }
    }
 
    // function used to filter a bead type
