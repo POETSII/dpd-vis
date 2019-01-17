@@ -20,16 +20,19 @@
 <svg width="1900" height="1200"></svg>
 <script>
 
+    var replay_rate = 1;
+    var replay = false;
     var data    = [], min = max = 500;
+    var universe_scale=2.0;
+    var bead_scale=1.5;
     //var origin  = [450, 520], startAngle = Math.PI/8, beta = startAngle;
-    var origin  = [450, 520], startAngle = 0, beta = startAngle;
+    var origin  = [450, 370], startAngle = 0, beta = startAngle;
     //var origin  = [450, 720], startAngle = 0, beta = startAngle;
     var svg     = d3.select('svg').call(d3.drag().on('drag', dragged).on('start', dragStart).on('end', dragEnd)).append('g');
     var color   = d3.scaleOrdinal(d3.schemeCategory10);
     var rn      = function(min, max){ return Math.round(d3.randomUniform(min, max+1)()); };
     var mx, mouseX;
     var filter_list = [ ]; // list of beads that we don't want shown
-    var replay = false;
 
    // functions and variables for getting the current update count (for replaying and resuming experiments)
    function getUpdateCnt(jsonfile) {
@@ -51,16 +54,18 @@
               if(replay){
                 var tmp = getNewData("_frames/state_"+cur_replay+".json");
                 data3D = _3d(tmp);
+                data = tmp;
                 processData(data3D);
 
                 cur_replay = cur_replay + framerate;
                 if(cur_replay < update_cnt) {
-                    replayTimer = setTimeout(showFrame, 50);
+                    //console.log("Frame: "+cur_replay);
+                    replayTimer = setTimeout(showFrame, replay_rate);
                 } else {
                   replay = false;
                 } 
               }
-          }, 1);
+          }, replay_rate);
     } else {
       // cancel the current replay
       cur_replay = update_cnt;
@@ -135,8 +140,6 @@
 
     data = getNewData("state.json");
 
-    var universe_scale=2.0;
-    var bead_scale=1.5;
 
     var _3d = d3._3d()
         .scale(1/universe_scale)
@@ -152,9 +155,9 @@
 
     // ------------------- auto rotate -------------------------
     // code to slowly rotate the cube of particles
-    //var autorotate = setInterval( autorotater, 20 ); // rotate it a bit every 250ms?
+    //var autorotate = setInterval( autorotater, 250 ); // rotate it a bit every 250ms?
     function autorotater() {
-        beta -= 0.001;
+        beta -= 0.01;
         processData(_3d.rotateY(beta + startAngle)(data));
     } 
 
@@ -167,6 +170,7 @@
         if(!replay) {
             if(evt.data == "u") {
                 var tmp = getNewData("state.json");
+                data = tmp;
                 data3D = _3d(tmp);
                 processData(data3D);
                 update_cnt=update_cnt+1;
