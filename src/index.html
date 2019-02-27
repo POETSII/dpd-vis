@@ -161,21 +161,28 @@
     function getNewData(jsonfile) {
         p_pos = [];
         var request = new XMLHttpRequest();
-        request.open("GET", jsonfile, false);
-        request.send(null)
-        var JSON_object = JSON.parse(request.responseText);
-        var particles = JSON_object.beads;
-        for(var i = 0; i<particles.length; i++) {
-            p_pos.push({
-               x: Math.round(particles[i].x*100.0) - max,
-               y: Math.round(particles[i].y*100.0) - max,
-               z: Math.round(particles[i].z*100.0) - max,
-               id: particles[i].id,
-               type: particles[i].type
-             });
-             //console.log(data[i]);
+        while(1){
+          try{
+            request.open("GET", jsonfile, false);
+            request.send(null)
+            var JSON_object = JSON.parse(request.responseText);
+            var particles = JSON_object.beads;
+            for(var i = 0; i<particles.length; i++) {
+                p_pos.push({
+                  x: Math.round(particles[i].x*100.0) - max,
+                  y: Math.round(particles[i].y*100.0) - max,
+                  z: Math.round(particles[i].z*100.0) - max,
+                  id: particles[i].id,
+                  type: particles[i].type
+                });
+                //console.log(data[i]);
+            }
+          }catch(e){
+            console.log("Server error, trying again.");
+            continue;
+          }
+          return p_pos;
         }
-        return p_pos;
     }
 
     // beadFiltered(beadId) this returns true if the bead ID is in the filter list
@@ -214,16 +221,24 @@
     // ---------------------- web sockets ----------------------
     const socket = new WebSocket('ws://localhost:8079');
 
+    var skip=10;
+    var skipCount=0;
+
     socket.onmessage = function (evt) {
         // update the particle position
         update_cnt=update_cnt+1;
         if(!replay) {
             if(evt.data == "u") {
-                var tmp = getNewData("state.json");
-                data = tmp;
-                data3D = _3d(tmp);
-                processData(data3D);
-                d3.select("#timestepText").text("Timestep: " + (update_cnt*emit_rate));
+                if((skipCount%skip)==0){
+                  skipCount=0;
+                  var tmp = getNewData("state.json");
+                  data = tmp;
+                  data3D = _3d(tmp);
+                  processData(data3D);
+                  d3.select("#timestepText").text("Timestep: " + (update_cnt*emit_rate));
+                }
+                ++skipCount;
+                
             } else {
               console.log("Warning: we recvd a command other than update: "+evt.data);
             }
@@ -249,6 +264,14 @@
 
     function processData(data){
 
+        var filteredData=[]
+        for(var b of data){
+          if(!beadFilter(b)){
+            filteredData.push(b);
+          }
+        }
+        data=filteredData;
+
         var points = svg.selectAll('circle').data(data);
 
         points
@@ -264,7 +287,7 @@
                                            })
             .attr('opacity',   function(d, i){  
                                            if(beadFilter(d.type)) {
-                                             return 0.35;
+                                             return 0.0;
                                             } else {
                                              return 1.0; 
                                             }
