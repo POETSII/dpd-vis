@@ -10,14 +10,15 @@
      <input type="text" id="filter_id" placeholder="particle ID to filter&hellip;">
 </form>
 
-<p id="spacer">  </p> 
+<p id="spacer">  </p>
 
 <form name="replay_input">
      <input value="Replay"  type="button" onclick="replayFrames()" >
      <input type="text" id="replay_framerate" placeholder="framerate">
 </form>
 
-<svg width="1900" height="1200"></svg>
+<svg width="1200" height="1200"></svg>
+
 <script>
 
     var emit_rate = 47; // how many timesteps until a frame is emitted
@@ -29,7 +30,9 @@
     //var origin  = [450, 520], startAngle = Math.PI/8, beta = startAngle;
     var origin  = [450, 370], startAngle = 0, beta = startAngle;
     //var origin  = [450, 720], startAngle = 0, beta = startAngle;
-    var svg     = d3.select('svg').call(d3.drag().on('drag', dragged).on('start', dragStart).on('end', dragEnd)).append('g');
+    // var svg     = d3.select('svg').call(d3.drag().on('drag', dragged).on('start', dragStart).on('end', dragEnd)).append('g');
+
+    var svg = d3.select('svg').on('mousemove', mouseBeadMove).on('mouseout', mouseBeadOut);
     var color   = d3.scaleOrdinal(d3.schemeCategory10);
     var rn      = function(min, max){ return Math.round(d3.randomUniform(min, max+1)()); };
     var mx, mouseX;
@@ -47,7 +50,7 @@
                         .attr("y", 50).text("Timestep: "+(update_cnt*emit_rate))
                         .attr("font-family", "sans-serif").attr("font-size", "20px");
 
-    // displays whether the playback is live or not 
+    // displays whether the playback is live or not
     var timestepText = svg.append("text").attr("x", 700).attr("id", "playbackText")
                         .attr("y", 50).text("Live").style('fill', 'green').attr("font-weight", "bold")
                         .attr("font-family", "sans-serif").attr("font-size", "30px");
@@ -83,7 +86,7 @@
                     replayTimer = setTimeout(showFrame, replay_rate);
                 } else {
                   replay = false;
-                } 
+                }
               }
           }, replay_rate);
     } else {
@@ -112,15 +115,15 @@
                  if(replayStatusOpacity >= 1.0) {
                      replayStatusFading = true;
                  }
-            } 
+            }
          } else {
             replayStatusOpacity = 1.0;
-         } 
+         }
 
-         d3.select("#playbackText").attr('opacity', replayStatusOpacity); 
-   } 
+         d3.select("#playbackText").attr('opacity', replayStatusOpacity);
+   }
 
-    
+
 
    // function used to filter a bead type
    function filterBeads(event) {
@@ -183,7 +186,7 @@
       for(var i=0; i<filter_list.length; i++) {
            if(bead_type == filter_list[i])
               return true;
-      } 
+      }
       return false;
     }
 
@@ -208,7 +211,7 @@
     function autorotater() {
         beta -= 0.01;
         processData(_3d.rotateY(beta + startAngle)(data));
-    } 
+    }
 
 
     // ---------------------- web sockets ----------------------
@@ -255,18 +258,18 @@
             .enter()
             .append('circle')
             .merge(points)
-            .attr('fill',   function(d, i){  
+            .attr('fill',   function(d, i){
                                            if(beadFilter(d.type)) {
                                              return "none";
                                             } else {
-                                             return color(d.type); 
+                                             return color(d.type);
                                             }
                                            })
-            .attr('opacity',   function(d, i){  
+            .attr('opacity',   function(d, i){
                                            if(beadFilter(d.type)) {
                                              return 0.35;
                                             } else {
-                                             return 1.0; 
+                                             return 1.0;
                                             }
                                            })
             .attr('stroke', function(d, i){ return d3.color(color(d.type)).darker(0.5); })
@@ -279,5 +282,22 @@
     }
 
     processData(data3D);
+
+    var mbead = svg.append('circle').attr('fill', '"#ffffff"').attr('stroke', '#ffffff').attr('cx', 100).attr('cy', 100).attr('r', 3);
+
+    function mouseBeadMove() {
+        mx = d3.event.x;
+        my = d3.event.y - 60;
+        svg.selectAll('circle').remove();
+        if (mx < 1000 && my < 1000) {
+            console.log("X = " + mx + " Y = " + my);
+            svg.append('circle').attr('fill', '"#000000"').attr('stroke', '#000000').attr('cx', mx).attr('cy', my).attr('r', 10);
+        }
+    }
+
+    function mouseBeadOut() {
+        svg.selectAll('circle').remove();
+        console.log("MOUSE OUT");
+    }
 </script>
 </body>
