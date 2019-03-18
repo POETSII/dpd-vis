@@ -5,7 +5,7 @@
 //
 //---------------------------------------------------------------------
 
-// creates a node.js based server used to render the incoming particle movements from the simulation 
+// creates a node.js based server used to render the incoming particle movements from the simulation
 var fs = require('fs');
 var path = require('path');
 
@@ -18,6 +18,8 @@ console.log("---------------------------------");
 console.log("frames_location: "+config.frames);
 console.log("state filename: "+config.state);
 console.log("---------------------------------");
+
+const wstream = fs.createWriteStream('./to_poets_devices.sock')
 
 // copy over the node_modules directory
 // https://stackoverflow.com/questions/13786160/copy-folder-recursively-in-node-js
@@ -72,7 +74,7 @@ var r1 = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
   terminal: false
-}); 
+});
 
 // open our web socket
 const wss = new WebSocket.Server({port: 8079});
@@ -88,11 +90,21 @@ function sendUpdate(wss, update_str) {
     });
 }
 
+wss.on('connection', function(ws) {
+  ws.on('message', function incoming(data) {
+    // write to a named pipe that will be picked up by the executive and passed to pts-serve
+    wstream.write(data);
+    // var pos = JSON.parse(data);
+    // console.log(pos.mx);
+    // console.log(pos.my);
+  })
+})
+
 // updates the frames folder
 function update_frames(f) {
     //copy state.json to config.frames directory
     copyFileSync(config.state, config.frames+'/state_'+f+'.json');
-    app.get('/_frames/state_'+f+'.json', (req,res) => res.sendFile(path.join(cdir+'/'+config.frames+'/state_'+f+'.json'))); 
+    app.get('/_frames/state_'+f+'.json', (req,res) => res.sendFile(path.join(cdir+'/'+config.frames+'/state_'+f+'.json')));
 }
 
 // create the _frames folder if it does not exist
@@ -107,7 +119,7 @@ fs.readdir(config.frames, (err, files) => {
    frame_cnt = files.length;
    files.forEach( function(file) {
       //console.log("Adding get rule for ./frames/" + file);
-      app.get('/_frames/'+file, (req,res) => res.sendFile(path.join(cdir+'/'+config.frames+'/'+file))); 
+      app.get('/_frames/'+file, (req,res) => res.sendFile(path.join(cdir+'/'+config.frames+'/'+file)));
    });
 
    // write the frame_cnt to the _meta.json file
@@ -117,14 +129,14 @@ fs.readdir(config.frames, (err, files) => {
          return console.log(err);
       }
       console.log("The _meta.json file was saved\n");
-   }); 
+   });
    // provide a GET rule for the _meta.json file
    app.get('/meta.json', (req, res) => res.sendFile(path.join(cdir+'/_meta.json')));
 });
 
 // get stdin data which will be passed to the rendered graph
 r1.on('line', function(line) {
-  sendUpdate(wss, line); 
+  sendUpdate(wss, line);
   update_frames(frame_cnt);
   frame_cnt = frame_cnt + 1;
 });

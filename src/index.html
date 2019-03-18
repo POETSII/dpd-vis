@@ -21,6 +21,46 @@
 
 <script>
 
+    // https://github.com/wbkd/d3-extended
+    d3.selection.prototype.moveToFront = function() {
+      return this.each(function(){
+        this.parentNode.appendChild(this);
+      });
+    };
+    d3.selection.prototype.moveToBack = function() {
+        return this.each(function() {
+            var firstChild = this.parentNode.firstChild;
+            if (firstChild) {
+                this.parentNode.insertBefore(this, firstChild);
+            }
+        });
+    };
+
+    // ---------------------- web sockets ----------------------
+    const socket = new WebSocket('ws://localhost:8079');
+
+    socket.onmessage = function (evt) {
+        // update the particle position
+        update_cnt=update_cnt+1;
+        if(!replay) {
+            if(evt.data == "u") {
+                var tmp = getNewData("state.json");
+                data = tmp;
+                data3D = _3d(tmp);
+                processData(data3D);
+                d3.select("#timestepText").text("Timestep: " + (update_cnt*emit_rate));
+            } else {
+              console.log("Warning: we recvd a command other than update: "+evt.data);
+            }
+         }
+    }
+
+    function sendMBead(mx, my) {
+        socket.send("{\"mx\": " + mx + ", \"my\": " + my + "}");
+    }
+
+    // ---------------------- /web sockets ----------------------
+
     var emit_rate = 47; // how many timesteps until a frame is emitted
     var replay_rate = 1;
     var replay = false;
@@ -32,7 +72,7 @@
     //var origin  = [450, 720], startAngle = 0, beta = startAngle;
     // var svg     = d3.select('svg').call(d3.drag().on('drag', dragged).on('start', dragStart).on('end', dragEnd)).append('g');
 
-    var svg = d3.select('svg').on('mousemove', mouseBeadMove).on('mouseout', mouseBeadOut);
+    var svg = d3.select('svg');
     var color   = d3.scaleOrdinal(d3.schemeCategory10);
     var rn      = function(min, max){ return Math.round(d3.randomUniform(min, max+1)()); };
     var mx, mouseX;
@@ -54,6 +94,11 @@
     var timestepText = svg.append("text").attr("x", 700).attr("id", "playbackText")
                         .attr("y", 50).text("Live").style('fill', 'green').attr("font-weight", "bold")
                         .attr("font-family", "sans-serif").attr("font-size", "30px");
+
+    // invisible area to sit at the front and read mouse cursor positions for interactive stuff
+    var invisiblearea = svg.append("rect").attr("width", 1200).attr("height", 1200)
+                           .attr("x", 0).attr("y", 0).style("fill", 'green').moveToFront()
+                           .style('opacity', 0.0).on('mousemove', mouseBeadMove).on('mouseout', mouseBeadOut);
 
    // functions and variables for getting the current update count (for replaying and resuming experiments)
    function getUpdateCnt(jsonfile) {
@@ -213,29 +258,6 @@
         processData(_3d.rotateY(beta + startAngle)(data));
     }
 
-
-    // ---------------------- web sockets ----------------------
-    const socket = new WebSocket('ws://localhost:8079');
-
-    socket.onmessage = function (evt) {
-        // update the particle position
-        update_cnt=update_cnt+1;
-        if(!replay) {
-            if(evt.data == "u") {
-                var tmp = getNewData("state.json");
-                data = tmp;
-                data3D = _3d(tmp);
-                processData(data3D);
-                d3.select("#timestepText").text("Timestep: " + (update_cnt*emit_rate));
-            } else {
-              console.log("Warning: we recvd a command other than update: "+evt.data);
-            }
-         }
-    }
-
-    // ---------------------- /web sockets ----------------------
-
-
     function dragStart(){
         mx = d3.event.x;
     }
@@ -276,28 +298,28 @@
             .sort(function(a, b){    return d3.descending(a.rotated.z, b.rotated.z); })
             .attr('cx', function(d){ return d.projected.x; })
             .attr('cy', function(d){ return d.projected.y; })
-            .attr('r' , function(d){ return 2.22*bead_scale*zScale(d.rotated.z); });
+            .attr('r' , function(d){ return 2.22*bead_scale*zScale(d.rotated.z); })
+            .moveToBack();
 
         points.exit().remove();
     }
 
     processData(data3D);
 
-    var mbead = svg.append('circle').attr('fill', '"#ffffff"').attr('stroke', '#ffffff').attr('cx', 100).attr('cy', 100).attr('r', 3);
-
     function mouseBeadMove() {
-        mx = d3.event.x;
-        my = d3.event.y - 60;
-        svg.selectAll('circle').remove();
-        if (mx < 1000 && my < 1000) {
-            console.log("X = " + mx + " Y = " + my);
-            svg.append('circle').attr('fill', '"#000000"').attr('stroke', '#000000').attr('cx', mx).attr('cy', my).attr('r', 10);
+        x = d3.event.x - 5;
+        y = d3.event.y - 60;
+        if (x < 1000 && y < 1000) {
+            // console.log("X = " + x + " Y = " + y);
+            sendMBead(x, y);
         }
+
     }
 
     function mouseBeadOut() {
-        svg.selectAll('circle').remove();
         console.log("MOUSE OUT");
+        sendMBead(-1, -1);
     }
+
 </script>
 </body>
