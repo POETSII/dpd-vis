@@ -100,6 +100,8 @@
                            .attr("x", 0).attr("y", 0).style("fill", 'green').moveToFront()
                            .style('opacity', 0.0).on('mousemove', mouseBeadMove).on('mouseout', mouseBeadOut);
 
+    var timer = performance.now();
+
    // functions and variables for getting the current update count (for replaying and resuming experiments)
    function getUpdateCnt(jsonfile) {
        var request = new XMLHttpRequest();
@@ -307,11 +309,15 @@
     processData(data3D);
 
     function mouseBeadMove() {
-        x = d3.event.x - 5;
-        y = d3.event.y - 60;
-        if (x < 1000 && y < 1000) {
-            // console.log("X = " + x + " Y = " + y);
-            sendMBead(x, y);
+        var t = performance.now()
+        if ((t - timer) > 200) {
+          x = d3.event.x - 5;
+          y = 1000 - d3.event.y - 60;
+          if (x < 1000 && y < 1000) {
+              console.log("X = " + x + " Y = " + y);
+              sendMBead(x, y);
+              timer = performance.now();
+          }
         }
 
     }
