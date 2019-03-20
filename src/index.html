@@ -97,7 +97,7 @@
 
     // invisible area to sit at the front and read mouse cursor positions for interactive stuff
     var invisiblearea = svg.append("rect").attr("width", 1200).attr("height", 1200)
-                           .attr("x", 0).attr("y", 0).style("fill", 'green').moveToFront()
+                           .attr("cx", 450).attr("cy", 370).style("fill", 'green').moveToFront()
                            .style('opacity', 0.0).on('mousemove', mouseBeadMove).on('mouseout', mouseBeadOut);
 
     var timer = performance.now();
@@ -311,19 +311,23 @@
     function mouseBeadMove() {
         var t = performance.now()
         if ((t - timer) > 200) {
-          x = d3.event.x - 5;
-          y = 1000 - d3.event.y - 60;
-          if (x < 1000 && y < 1000) {
-              console.log("X = " + x + " Y = " + y);
-              sendMBead(x, y);
+          x = d3.event.x;
+          y = d3.event.y;
+          // console.log("X = " + x + " Y = " + y);
+          if (x < 720 && y < 700 && x > 200 && y > 170) {
+              newX = (x - 200) / (720 - 200) * 10;
+              newY = 10 - ((y - 170) / (700 - 170) * 10);
+              sendMBead(newX, newY);
               timer = performance.now();
+          } else {
+              mouseBeadOut();
           }
         }
 
     }
 
     function mouseBeadOut() {
-        console.log("MOUSE OUT");
+        // console.log("MOUSE OUT");
         sendMBead(-1, -1);
     }
 
