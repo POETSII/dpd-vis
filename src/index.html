@@ -307,28 +307,32 @@
     }
 
     processData(data3D);
-
+    var outSent = false;
     function mouseBeadMove() {
-        var t = performance.now()
-        if ((t - timer) > 200) {
+        // var t = performance.now()
+        // if ((t - timer) > 200) {
           x = d3.event.x;
           y = d3.event.y;
           // console.log("X = " + x + " Y = " + y);
           if (x < 720 && y < 700 && x > 200 && y > 170) {
               newX = (x - 200) / (720 - 200) * 10;
               newY = 10 - ((y - 170) / (700 - 170) * 10);
+              outSent = false;
               sendMBead(newX, newY);
-              timer = performance.now();
+              // timer = performance.now();
           } else {
               mouseBeadOut();
           }
-        }
+        // }
 
     }
 
     function mouseBeadOut() {
         // console.log("MOUSE OUT");
-        sendMBead(-1, -1);
+        if (!outSent) {
+          sendMBead(-1, -1);
+          outSent = true;
+        }
     }
 
 </script>
