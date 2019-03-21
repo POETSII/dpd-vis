@@ -37,7 +37,7 @@
     };
 
     // ---------------------- web sockets ----------------------
-    const socket = new WebSocket('ws://localhost:8079');
+    const socket = new WebSocket('ws://ee-jbeaumon.ee.ic.ac.uk:8079');
 
     socket.onmessage = function (evt) {
         // update the particle position
@@ -329,9 +329,9 @@
           x = d3.event.x;
           y = d3.event.y;
           // console.log("X = " + x + " Y = " + y);
-          if (x < 720 && y < 700 && x > 200 && y > 170) {
-              newX = (x - 200) / (720 - 200) * 10;
-              newY = 10 - ((y - 170) / (700 - 170) * 10);
+          if (x < 1115 && y < 990 && x > 200 && y > 80) {
+              newX = (x - 200) / (1115 - 200) * 18;
+              newY = 18 - ((y - 80) / (990 - 80) * 18);
               outSent = false;
               sendMBead(newX, newY);
               // timer = performance.now();
