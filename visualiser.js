@@ -137,7 +137,7 @@ fs.readdir(config.frames, (err, files) => {
 // get stdin data which will be passed to the rendered graph
 r1.on('line', function(line) {
   sendUpdate(wss, line);
-  // update_frames(frame_cnt);
+  update_frames(frame_cnt);
   frame_cnt = frame_cnt + 1;
 });
 
