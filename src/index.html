@@ -208,12 +208,27 @@
                 .text(filter_string);
    }
 
+   var first = true;
     function getNewData(jsonfile) {
         p_pos = [];
-        var request = new XMLHttpRequest();
-        request.open("GET", jsonfile, false);
-        request.send(null)
-        var JSON_object = JSON.parse(request.responseText);
+        var parsed = false;
+
+        while (!parsed) {
+          try {
+            var request = new XMLHttpRequest();
+            request.open("GET", jsonfile, false);
+            request.send(null);
+            var JSON_object = JSON.parse(request.responseText);
+
+            parsed = true;
+            first = false;
+          } catch (e) {
+            if (first)
+              parsed = false;
+            else
+              parsed = true;
+          }
+        }
         var particles = JSON_object.beads;
         for(var i = 0; i<particles.length; i++) {
             p_pos.push({
