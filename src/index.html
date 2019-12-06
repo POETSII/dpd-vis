@@ -324,22 +324,17 @@
     processData(data3D);
     var outSent = false;
     function mouseBeadMove() {
-        // var t = performance.now()
-        // if ((t - timer) > 200) {
-          x = d3.event.x;
-          y = d3.event.y;
-          // console.log("X = " + x + " Y = " + y);
-          if (x < 1115 && y < 990 && x > 200 && y > 80) {
-              newX = (x - 200) / (1115 - 200) * 18;
-              newY = 18 - ((y - 80) / (990 - 80) * 18);
-              outSent = false;
-              sendMBead(newX, newY);
-              // timer = performance.now();
-          } else {
-              mouseBeadOut();
-          }
-        // }
-
+      x = d3.event.x;
+      y = d3.event.y;
+      console.log("x = " + x + ", y = " + y)
+      if (x < 1115 && y < 1150 && x > 200 && y > 220) {
+          newX = (x - 200) / (1115 - 200) * 18;
+          newY = 18 - ((y - 200) / 910 * 18);
+          outSent = false;
+          sendMBead(newX, newY);
+      } else {
+          mouseBeadOut();
+      }
     }
 
     function mouseBeadOut() {
