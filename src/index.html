@@ -50,7 +50,7 @@
                 processData(data3D);
                 d3.select("#timestepText").text("Timestep: " + (update_cnt*emit_rate));
             } else {
-              console.log("Warning: we recvd a command other than update: "+evt.data);
+              // console.log("Warning: we recvd a command other than update: "+evt.data);
             }
          }
     }
@@ -129,7 +129,7 @@
 
                 cur_replay = cur_replay + framerate;
                 if(cur_replay < update_cnt) {
-                    //console.log("Frame: "+cur_replay);
+                    // console.log("Frame: "+cur_replay);
                     replayTimer = setTimeout(showFrame, replay_rate);
                 } else {
                   replay = false;
@@ -178,14 +178,14 @@
      var i = filter_list.length;
      while(i--) {
         if(filter_id == filter_list[i]) {
-           console.log("removing filter for particle type "+filter_id);
+           // console.log("removing filter for particle type "+filter_id);
            filter_list.splice(i, 1);
            renderFilterList(filter_id);
            processData(data);
            return;
         }
      }
-     console.log("Adding filter for particle type "+ filter_id);
+     // console.log("Adding filter for particle type "+ filter_id);
      filter_list.push(filter_id);
      renderFilterList();
      processData(data);
@@ -326,7 +326,7 @@
     function mouseBeadMove() {
       x = d3.event.x;
       y = d3.event.y;
-      console.log("x = " + x + ", y = " + y)
+      // console.log("x = " + x + ", y = " + y)
       if (x < 1115 && y < 1150 && x > 200 && y > 220) {
           newX = (x - 200) / (1115 - 200) * 18;
           newY = 18 - ((y - 200) / 910 * 18);
