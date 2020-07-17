@@ -5,11 +5,18 @@
 //
 //---------------------------------------------------------------------
 
-// creates a node.js based server used to render the incoming particle movements from the simulation 
+// creates a node.js based server used to render the incoming particle movements from the simulation
 var fs = require('fs');
 var path = require('path');
-
 var cdir = process.cwd();
+
+// Parameters for getting a real nice picture
+var vol_side = 25;
+var timestep = 6000;
+var framesFolder = "/" + vol_side + "_frames";
+var fileName = "state_" + timestep + ".json";
+var filter_water = false;
+var offset = 15.0;
 
 // load in the config file
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
@@ -72,7 +79,7 @@ var r1 = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
   terminal: false
-}); 
+});
 
 // open our web socket
 const wss = new WebSocket.Server({port: 8079});
@@ -83,7 +90,6 @@ function sendUpdate(wss, update_str) {
     wss.clients.forEach(function each(client) {
      if(client !== wss && client.readyState == WebSocket.OPEN) {
       client.send(update_str);
-      //console.log(update_str);
      }
     });
 }
@@ -92,7 +98,7 @@ function sendUpdate(wss, update_str) {
 function update_frames(f) {
     //copy state.json to config.frames directory
     copyFileSync(config.state, config.frames+'/state_'+f+'.json');
-    app.get('/_frames/state_'+f+'.json', (req,res) => res.sendFile(path.join(cdir+'/'+config.frames+'/state_'+f+'.json'))); 
+    app.get('/_frames/state_'+f+'.json', (req,res) => res.sendFile(path.join(cdir+'/'+config.frames+'/state_'+f+'.json')));
 }
 
 // create the _frames folder if it does not exist
@@ -103,30 +109,8 @@ if(!fs.existsSync(config.frames)){
 // for initial setup find out how many frames are there already and save it as metadata in _meta.json
 // get the number of already completed frames from the frames folder and store it in an _meta.json file
 var frame_cnt;
-fs.readdir(config.frames, (err, files) => {
-   frame_cnt = files.length;
-   files.forEach( function(file) {
-      //console.log("Adding get rule for ./frames/" + file);
-      app.get('/_frames/'+file, (req,res) => res.sendFile(path.join(cdir+'/'+config.frames+'/'+file))); 
-   });
-
-   // write the frame_cnt to the _meta.json file
-   frame_cnt_json = "{ \"num_frames\":"+frame_cnt+"}"
-   fs.writeFile("./_meta.json", frame_cnt_json, function (err) {
-      if(err) {
-         return console.log(err);
-      }
-      console.log("The _meta.json file was saved\n");
-   }); 
-   // provide a GET rule for the _meta.json file
-   app.get('/meta.json', (req, res) => res.sendFile(path.join(cdir+'/_meta.json')));
-});
-
-// get stdin data which will be passed to the rendered graph
-r1.on('line', function(line) {
-  sendUpdate(wss, line); 
-  update_frames(frame_cnt);
-  frame_cnt = frame_cnt + 1;
+fs.readdir(framesFolder, (err, files) => {
+    app.get(framesFolder + "/" + fileName, (req,res) => res.sendFile(path.join(cdir + '/' + framesFolder + '/' + fileName)));
 });
 
 
@@ -135,3 +119,17 @@ app.get('/state.json', (req, res) => res.sendFile(path.join(cdir+'/'+config.stat
 app.get('/d3-3d.js', (req, res) => res.sendFile(path.join(__dirname+'/src/d3-3d.js')));
 
 app.listen(3000, () => console.log('listening on port 3000'))
+
+wss.on('connection', function() {
+  wss.clients.forEach(function each(client) {
+    if(client.readyState == WebSocket.OPEN) {
+        var d = '{\n'
+        + '\t' + '"vol_side":     ' + vol_side + ",\n"
+        + '\t' + '"timestep":     ' + timestep + ",\n"
+        + '\t' + '"filter_water": ' + filter_water + ",\n"
+        + "\t" + '"offset":       ' + offset + "\n"
+        + '}' + "\n";
+        client.send(d);
+    }
+  });
+});

@@ -4,159 +4,32 @@
 <script src="d3-3d.js"></script>
 <body>
 
-
-<form name="filter_input">
-     <input value="Filter"  type="button" onclick="filterBeads()" >
-     <input type="text" id="filter_id" placeholder="particle ID to filter&hellip;">
-</form>
-
-<p id="spacer">  </p> 
-
-<form name="replay_input">
-     <input value="Replay"  type="button" onclick="replayFrames()" >
-     <input type="text" id="replay_framerate" placeholder="framerate">
-</form>
-
-<svg width="1900" height="1200"></svg>
+<svg width="2000" height="2000"></svg>
 <script>
 
-    var emit_rate = 47; // how many timesteps until a frame is emitted
-    var replay_rate = 1;
-    var replay = false;
-    var data    = [], min = max = 500;
-    var universe_scale=2.0;
-    var bead_scale=1.5;
+    var filter_water = false;
+
+    var data    = [], min = max = 0;
+    var universe_scale = 2.0;
+    var bead_scale = 1;
     //var origin  = [450, 520], startAngle = Math.PI/8, beta = startAngle;
-    var origin  = [450, 370], startAngle = 0, beta = startAngle;
+    var origin  = [500, 1500], startAngle = 0, beta = 0;
     //var origin  = [450, 720], startAngle = 0, beta = startAngle;
-    var svg     = d3.select('svg').call(d3.drag().on('drag', dragged).on('start', dragStart).on('end', dragEnd)).append('g');
-    var color   = d3.scaleOrdinal(d3.schemeCategory10);
-    var rn      = function(min, max){ return Math.round(d3.randomUniform(min, max+1)()); };
+    // var svg     = d3.select('svg').call(d3.drag().on('drag', dragged).on('start', dragStart).on('end', dragEnd)).append('g');
+    var svg     = d3.select('svg');
+    // var colour   = d3.scaleOrdinal(d3.schemeCategory10);
+    // var rn      = function(min, max){ return Math.round(d3.randomUniform(min, max+1)()); };
     var mx, mouseX;
-    var filter_list = [ ]; // list of beads that we don't want shown
+    var filter_list = []; // list of beads that we don't want shown
 
-    var update_cnt = getUpdateCnt('./meta.json');
-
-    // text for the current filter list
-    var filterText = svg.append("text").attr("x", 10).attr("id", "filterText")
-                        .attr("y", 75).text("")
-                        .attr("font-family", "sans-serif").attr("font-size", "20px");
-
-    // displays the current timestep being displayed
-    var timestepText = svg.append("text").attr("x", 10).attr("id", "timestepText")
-                        .attr("y", 50).text("Timestep: "+(update_cnt*emit_rate))
-                        .attr("font-family", "sans-serif").attr("font-size", "20px");
-
-    // displays whether the playback is live or not 
-    var timestepText = svg.append("text").attr("x", 700).attr("id", "playbackText")
-                        .attr("y", 50).text("Live").style('fill', 'green').attr("font-weight", "bold")
-                        .attr("font-family", "sans-serif").attr("font-size", "30px");
-
-   // functions and variables for getting the current update count (for replaying and resuming experiments)
-   function getUpdateCnt(jsonfile) {
-       var request = new XMLHttpRequest();
-       request.open("GET", jsonfile, false);
-       request.send(null)
-       var JSON_object = JSON.parse(request.responseText);
-       return JSON_object.num_frames;
-   }
-
-   // functions that replays the simulation up until this point
-   function replayFrames() {
-    // change the status text
-    d3.select("#playbackText").text("Replaying...").style('fill', 'red');
-    if(!replay) {
-      var framerate = parseInt(document.getElementById("replay_framerate").value);
-      var cur_replay = 1;
-      replay = true;
-         let replayTimer = setTimeout(function showFrame(){
-              if(replay){
-                var tmp = getNewData("_frames/state_"+cur_replay+".json");
-                data3D = _3d(tmp);
-                data = tmp;
-                processData(data3D);
-                d3.select("#timestepText").text("Timestep: " + (cur_replay*emit_rate));
-
-                cur_replay = cur_replay + framerate;
-                if(cur_replay < update_cnt) {
-                    //console.log("Frame: "+cur_replay);
-                    replayTimer = setTimeout(showFrame, replay_rate);
-                } else {
-                  replay = false;
-                } 
-              }
-          }, replay_rate);
-    } else {
-      // cancel the current replay
-      cur_replay = update_cnt;
-      replay = false;
-      // restore the playback status text
-      d3.select("#playbackText").text("Live").style('fill', 'green');
+    function colour(beadType) {
+        if (beadType == 0)
+            return "#1f77b4";
+        else if (beadType == 1)
+            return "#ff7f0e";
+        else if (beadType == 2)
+            return "#2ca02c";
     }
-   }
-
-   // function to fade the replay status text
-   var replayFader = setInterval( fadeStatus, 100 ); // rotate it a bit every 250ms?
-   var replayStatusOpacity = 1.0;
-   var replayStatusFading = true;
-   var replayStatusFadeAmount = 0.075;
-   function fadeStatus() {
-         if(replay) {
-            if(replayStatusFading) {
-                 replayStatusOpacity -= replayStatusFadeAmount;
-                 if(replayStatusOpacity <= 0.2) {
-                     replayStatusFading = false;
-                 }
-            } else {
-                 replayStatusOpacity += replayStatusFadeAmount;
-                 if(replayStatusOpacity >= 1.0) {
-                     replayStatusFading = true;
-                 }
-            } 
-         } else {
-            replayStatusOpacity = 1.0;
-         } 
-
-         d3.select("#playbackText").attr('opacity', replayStatusOpacity); 
-   } 
-
-    
-
-   // function used to filter a bead type
-   function filterBeads(event) {
-     var filter_id = document.getElementById("filter_id").value;
-     var i = filter_list.length;
-     while(i--) {
-        if(filter_id == filter_list[i]) {
-           console.log("removing filter for particle type "+filter_id);
-           filter_list.splice(i, 1);
-           renderFilterList(filter_id);
-           processData(data);
-           return;
-        }
-     }
-     console.log("Adding filter for particle type "+ filter_id);
-     filter_list.push(filter_id);
-     renderFilterList();
-     processData(data);
-     return;
-   }
-
-   // maintains a list of currently active filters on the page
-   function renderFilterList(filter_id){
-      // clear the text
-      d3.select("#filterText").text("");
-      // create filter text string
-      var filter_string = "";
-      if(filter_list.length != 0) {
-         filter_string = "Filtering: ";
-      }
-      for(var i=0; i<filter_list.length; i++) {
-         filter_string = filter_string + " " + filter_list[i];
-      }
-      var p = d3.select("#filterText")
-                .text(filter_string);
-   }
 
     function getNewData(jsonfile) {
         p_pos = [];
@@ -166,29 +39,27 @@
         var JSON_object = JSON.parse(request.responseText);
         var particles = JSON_object.beads;
         for(var i = 0; i<particles.length; i++) {
+            if (particles[i].z < offset || particles[i].z > (offset + 1.0)) {
+                continue;
+            }
             p_pos.push({
-               x: Math.round(particles[i].x*100.0) - max,
-               y: Math.round(particles[i].y*100.0) - max,
-               z: Math.round(particles[i].z*100.0) - max,
+               x: Math.round(particles[i].x * 100.0) - max,
+               y: Math.round(particles[i].y * 100.0) - max,
+               z: Math.round(particles[i].z * 100.0) - max,
                id: particles[i].id,
                type: particles[i].type
              });
-             //console.log(data[i]);
         }
         return p_pos;
     }
 
     // beadFiltered(beadId) this returns true if the bead ID is in the filter list
     function beadFilter(bead_type){
-      for(var i=0; i<filter_list.length; i++) {
-           if(bead_type == filter_list[i])
-              return true;
-      } 
+      if (bead_type == 0) { // Is water
+        return filter_water;
+      }
       return false;
     }
-
-    data = getNewData("state.json");
-
 
     var _3d = d3._3d()
         .scale(1/universe_scale)
@@ -197,55 +68,23 @@
         .rotateY(startAngle)
         .primitiveType('POINTS');
 
-
-    var data3D  = _3d(data);
-    var extentZ = d3.extent(data3D, function(d){ return d.rotated.z });
-    var zScale  = d3.scaleLinear().domain([extentZ[1]+10, extentZ[0]-10]).range([1, 8]);
-
-    // ------------------- auto rotate -------------------------
-    // code to slowly rotate the cube of particles
-    //var autorotate = setInterval( autorotater, 250 ); // rotate it a bit every 250ms?
-    function autorotater() {
-        beta -= 0.01;
-        processData(_3d.rotateY(beta + startAngle)(data));
-    } 
-
+    var zScale = 0
 
     // ---------------------- web sockets ----------------------
     const socket = new WebSocket('ws://localhost:8079');
-
-    socket.onmessage = function (evt) {
-        // update the particle position
-        update_cnt=update_cnt+1;
-        if(!replay) {
-            if(evt.data == "u") {
-                var tmp = getNewData("state.json");
-                data = tmp;
-                data3D = _3d(tmp);
-                processData(data3D);
-                d3.select("#timestepText").text("Timestep: " + (update_cnt*emit_rate));
-            } else {
-              console.log("Warning: we recvd a command other than update: "+evt.data);
-            }
-         }
+    var offset = 0.0;
+    socket.onmessage = function (event) {
+        d = JSON.parse(event.data);
+        filter_water = d.filter_water;
+        offset = d.offset;
+        state = getNewData(d.vol_side + "_frames/state_" + d.timestep + ".json");
+        state3D = _3d(state);
+        extentZ = d3.extent(state3D, function(d){ return d.rotated.z });
+        zScale  = d3.scaleLinear().domain([extentZ[1]+10, extentZ[0]-10]).range([1, 8]);
+        processData(state3D);
     }
 
     // ---------------------- /web sockets ----------------------
-
-
-    function dragStart(){
-        mx = d3.event.x;
-    }
-
-    function dragged(){
-        mouseX = mouseX || 0;
-        beta   = (d3.event.x - mx + mouseX) * Math.PI / 360 * (-1);
-        processData(_3d.rotateY(beta + startAngle)(data));
-    }
-
-    function dragEnd(){
-        mouseX = d3.event.x - mx + mouseX;
-    }
 
     function processData(data){
 
@@ -255,29 +94,37 @@
             .enter()
             .append('circle')
             .merge(points)
-            .attr('fill',   function(d, i){  
+            .attr('fill',   function(d, i){
                                            if(beadFilter(d.type)) {
                                              return "none";
                                             } else {
-                                             return color(d.type); 
+                                             return colour(d.type);
                                             }
                                            })
-            .attr('opacity',   function(d, i){  
+            .attr('opacity',   function(d, i){
                                            if(beadFilter(d.type)) {
-                                             return 0.35;
+                                             return 0;
                                             } else {
-                                             return 1.0; 
+                                             return 1.0;
                                             }
                                            })
-            .attr('stroke', function(d, i){ return d3.color(color(d.type)).darker(0.5); })
+            .attr('stroke', function(d, i){
+                                           if (beadFilter(d.type)) {
+                                            return "none";
+                                           } else {
+                                            return d3.color(colour(d.type)).darker(0.5);
+                                           }
+                                          })
             .sort(function(a, b){    return d3.descending(a.rotated.z, b.rotated.z); })
             .attr('cx', function(d){ return d.projected.x; })
             .attr('cy', function(d){ return d.projected.y; })
-            .attr('r' , function(d){ return 2.22*bead_scale*zScale(d.rotated.z); });
+            .attr('r' , function(d){ return 2.22*bead_scale*zScale(d.rotated.z);
+                                 });
 
         points.exit().remove();
     }
 
-    processData(data3D);
+    // processData(data3D);
+
 </script>
 </body>
