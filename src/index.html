@@ -8,27 +8,39 @@
 <script>
 
     var filter_water = false;
+    var blackWhite = false;
+    var dimension = 'x';
 
     var data    = [], min = max = 0;
     var universe_scale = 2.0;
     var bead_scale = 1;
     //var origin  = [450, 520], startAngle = Math.PI/8, beta = startAngle;
-    var origin  = [500, 1500], startAngle = 0, beta = 0;
+    var origin  = [0, 0], startAngle = 0, beta = 0;
     //var origin  = [450, 720], startAngle = 0, beta = startAngle;
     // var svg     = d3.select('svg').call(d3.drag().on('drag', dragged).on('start', dragStart).on('end', dragEnd)).append('g');
     var svg     = d3.select('svg');
+    svg.attr('fill', 'white').attr('opacity', 1.0);
     // var colour   = d3.scaleOrdinal(d3.schemeCategory10);
     // var rn      = function(min, max){ return Math.round(d3.randomUniform(min, max+1)()); };
     var mx, mouseX;
     var filter_list = []; // list of beads that we don't want shown
 
     function colour(beadType) {
+      if (!blackWhite) {
         if (beadType == 0)
             return "#1f77b4";
         else if (beadType == 1)
             return "#ff7f0e";
         else if (beadType == 2)
             return "#2ca02c";
+      } else {
+        if (beadType == 0)
+            return "black";
+        else if (beadType == 1)
+            return "grey";
+        else if (beadType == 2)
+            return "white";
+      }
     }
 
     function getNewData(jsonfile) {
@@ -39,9 +51,20 @@
         var JSON_object = JSON.parse(request.responseText);
         var particles = JSON_object.beads;
         for(var i = 0; i<particles.length; i++) {
+          if (dimension == 'x') {
+            if (particles[i].x < offset || particles[i].x > (offset + 1.0)) {
+                continue;
+            }
+          } else if (dimension == 'y') {
+            if (particles[i].y < offset || particles[i].y > (offset + 1.0)) {
+                continue;
+            }
+          } else if (dimension == 'z') {
             if (particles[i].z < offset || particles[i].z > (offset + 1.0)) {
                 continue;
             }
+          }
+          if (dimension == 'x' || dimension == 'z') {
             p_pos.push({
                x: Math.round(particles[i].x * 100.0) - max,
                y: Math.round(particles[i].y * 100.0) - max,
@@ -49,6 +72,15 @@
                id: particles[i].id,
                type: particles[i].type
              });
+          } else {
+              p_pos.push({
+               x: Math.round(particles[i].y * 100.0) - max,
+               y: Math.round(particles[i].x * 100.0) - max,
+               z: Math.round(particles[i].z * 100.0) - max,
+               id: particles[i].id,
+               type: particles[i].type
+             });
+          }
         }
         return p_pos;
     }
@@ -61,32 +93,62 @@
       return false;
     }
 
-    var _3d = d3._3d()
-        .scale(1/universe_scale)
-        .origin(origin)
-        .rotateX(startAngle)
-        .rotateY(startAngle)
-        .primitiveType('POINTS');
-
     var zScale = 0
 
     // ---------------------- web sockets ----------------------
     const socket = new WebSocket('ws://localhost:8079');
     var offset = 0.0;
     socket.onmessage = function (event) {
-        d = JSON.parse(event.data);
-        filter_water = d.filter_water;
-        offset = d.offset;
-        state = getNewData(d.vol_side + "_frames/state_" + d.timestep + ".json");
-        state3D = _3d(state);
-        extentZ = d3.extent(state3D, function(d){ return d.rotated.z });
-        zScale  = d3.scaleLinear().domain([extentZ[1]+10, extentZ[0]-10]).range([1, 8]);
-        processData(state3D);
+        if (event.data != "DONE") {
+          d = JSON.parse(event.data);
+          filter_water = d.filter_water;
+          offset = d.offset;
+          blackWhite = d.blackWhite;
+          dimension = d.dimension;
+          state = getNewData(d.vol_side + "_frames/state_" + d.timestep + ".json");
+          var origin  = [0, 0];
+          var beta = 0;
+          var startAngle = 0;
+          if (dimension == 'x' || dimension == 'y') {
+            startAngle = Math.PI/2;
+          }
+          var _3d = d3._3d()
+            .scale(1/universe_scale)
+            .origin(origin)
+            .rotateX(startAngle)
+            .rotateY(startAngle)
+            .primitiveType('POINTS');
+          state3D = _3d(state);
+          extentZ = d3.extent(state3D, function(d){ return d.rotated.z });
+          zScale  = d3.scaleLinear().domain([extentZ[1] + 10, extentZ[0] - 10]).range([1, 8]);
+          processData(state3D);
+        } else {
+          window.location.reload();
+        }
     }
 
     // ---------------------- /web sockets ----------------------
 
     function processData(data){
+        var min_x = 10000.0;
+        var min_y = 10000.0;
+        var max_x = 0.0;
+        var max_y = 0.0;
+
+        for (i = 0; i < data.length; i++) {
+          p = data[i];
+          if (p.projected.x < min_x) {
+            min_x = p.projected.x;
+          } else if (p.projected.x > max_x) {
+            max_x = p.projected.x;
+          }
+
+          if (p.projected.y < min_y) {
+            min_y = p.projected.y;
+          } else if (p.projected.y > max_y) {
+            max_y = p.projected.y;
+          }
+        }
 
         var points = svg.selectAll('circle').data(data);
 
@@ -112,19 +174,32 @@
                                            if (beadFilter(d.type)) {
                                             return "none";
                                            } else {
-                                            return d3.color(colour(d.type)).darker(0.5);
+                                            if (blackWhite)
+                                              return "black";
+                                            else
+                                              return d3.color(colour(d.type)).darker(0.5);
                                            }
                                           })
             .sort(function(a, b){    return d3.descending(a.rotated.z, b.rotated.z); })
-            .attr('cx', function(d){ return d.projected.x; })
-            .attr('cy', function(d){ return d.projected.y; })
+            .attr('cx', function(d){ return 50 + d.projected.x + Math.sqrt(min_x * min_x); })
+            .attr('cy', function(d){ return 50 + d.projected.y + Math.sqrt(min_y * min_y); })
             .attr('r' , function(d){ return 2.22*bead_scale*zScale(d.rotated.z);
                                  });
 
         points.exit().remove();
+
+        svg.attr("width", function(){ return 100 + Math.sqrt(min_x * min_x) + max_x; })
+           .attr("height", function() { return 100 + Math.sqrt(min_y * min_y) + max_y; });
+
+        var html = d3.select("svg")
+              .attr("version", 1.1)
+              .attr("xmlns", "http://www.w3.org/2000/svg")
+              .node().parentNode.innerHTML;
+
+              socket.send(html);
     }
 
     // processData(data3D);
-
+    // window.location.reload();
 </script>
 </body>
