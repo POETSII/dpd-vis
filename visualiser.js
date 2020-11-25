@@ -12,9 +12,9 @@ var cdir = process.cwd();
 
 // Parameters for getting a real nice picture
 var vol_side = 25;
-var timesteps = [1, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 9998];
+var timesteps = [1, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000];
 var timestep = 0;
-var framesFolder = "/" + vol_side + "_frames";
+var framesFolder = "/" + vol_side + "_bond_frames";
 var fileName = "state_" + timestep + ".json";
 var filter_water = false;
 var offset = 0;
@@ -134,7 +134,8 @@ wss.on('connection', function() {
   wss.clients.forEach(function each(client) {
     if(client.readyState == WebSocket.OPEN) {
         timestep = timesteps[t];
-        framesFolder = "/" + vol_side + "_frames";
+        // timestep = 5000;
+        framesFolder = "/" + vol_side + "_bond_frames";
         fileName = "state_" + timestep + ".json";
 
         fs.readdir(framesFolder, (err, files) => {
@@ -164,7 +165,7 @@ wss.on('connection', function() {
         image += html[c]
     }
 
-    filepath = "blob-pics/";
+    filepath = "bond-pics/";
     createFolder(filepath);
     if (blackWhite) {
         filepath += "greyscale/";
@@ -189,12 +190,12 @@ wss.on('connection', function() {
     });
 
     // Increment
-    if (!filter_water) {
+    /*if (!filter_water) {
         filter_water = true;
-    } else if (!blackWhite) {
-        filter_water = false;
-        blackWhite = true;
-    } else if (offset < (vol_side - 1)) {
+    // } else if (!blackWhite) {
+    //     filter_water = false;
+    //     blackWhite = true;
+    } else*/ if (offset < (vol_side - 1)) {
         offset += 1.0;
         filter_water = false;
         blackWhite = false;

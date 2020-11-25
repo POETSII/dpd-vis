@@ -25,14 +25,18 @@
     var mx, mouseX;
     var filter_list = []; // list of beads that we don't want shown
 
+    const waterColour = "#1f77b4";
+    const oil1Colour = "#ff7f0e";
+    const oil2Colour = "#2ca02c";
+
     function colour(beadType) {
       if (!blackWhite) {
         if (beadType == 0)
-            return "#1f77b4";
+            return waterColour;
         else if (beadType == 1)
-            return "#ff7f0e";
+            return oil1Colour;
         else if (beadType == 2)
-            return "#2ca02c";
+            return oil2Colour;
       } else {
         if (beadType == 0)
             return "black";
@@ -43,6 +47,8 @@
       }
     }
 
+    total = 0;
+    minimum = 999999999999;
     function getNewData(jsonfile) {
         p_pos = [];
         var request = new XMLHttpRequest();
@@ -51,26 +57,58 @@
         var JSON_object = JSON.parse(request.responseText);
         var particles = JSON_object.beads;
         for(var i = 0; i<particles.length; i++) {
+          bonded = false;
           if (dimension == 'x') {
-            if (particles[i].x < offset || particles[i].x > (offset + 1.0)) {
-                continue;
+            particles[i].x -= offset;
+            if (particles[i].x < 0) {
+              particles[i].x += vol_side
             }
+            if (particles[i].x > 24.0 && particles[i].id >= 0x80000000) {
+              bonded = true;
+            }
+            // if (particles[i].x >= 1.0) {
+            //   continue;
+            // }
           } else if (dimension == 'y') {
-            if (particles[i].y < offset || particles[i].y > (offset + 1.0)) {
-                continue;
+            // if (particles[i].y < offset || particles[i].y > (offset + 1.0)) {
+            //     continue;
+            // }
+            particles[i].y -= offset;
+            if (particles[i].y < 0) {
+              particles[i].y += vol_side
             }
+            if (particles[i].y > 24.0 && particles[i].id >= 0x80000000) {
+              bonded = true;
+            }
+            // if (particles[i].y >= 1.0) {
+            //   continue;
+            // }
           } else if (dimension == 'z') {
-            if (particles[i].z < offset || particles[i].z > (offset + 1.0)) {
-                continue;
+            // if (particles[i].z < offset || particles[i].z > (offset + 1.0)) {
+            //     continue;
+            // }
+            particles[i].z -= offset;
+            if (particles[i].z < 0) {
+              particles[i].z += vol_side
             }
+            if (particles[i].z < 1.0 && particles[i].id >= 0x80000000) {
+              bonded = true;
+            }
+            // if (particles[i].z >= 1.0) {
+            //   continue;
+            // }
           }
+          // if (particles[i].id < 0x80000000) {
+          //   continue;
+          // }
           if (dimension == 'x' || dimension == 'z') {
             p_pos.push({
                x: Math.round(particles[i].x * 100.0) - max,
                y: Math.round(particles[i].y * 100.0) - max,
                z: Math.round(particles[i].z * 100.0) - max,
                id: particles[i].id,
-               type: particles[i].type
+               type: particles[i].type,
+               bond: bonded
              });
           } else {
               p_pos.push({
@@ -78,10 +116,13 @@
                y: Math.round(particles[i].x * 100.0) - max,
                z: Math.round(particles[i].z * 100.0) - max,
                id: particles[i].id,
-               type: particles[i].type
+               type: particles[i].type,
+               bond: bonded
              });
           }
         }
+        // console.log("Total");
+        // console.log(total);
         return p_pos;
     }
 
@@ -105,7 +146,8 @@
           offset = d.offset;
           blackWhite = d.blackWhite;
           dimension = d.dimension;
-          state = getNewData(d.vol_side + "_frames/state_" + d.timestep + ".json");
+          vol_side = d.vol_side;
+          state = getNewData(d.vol_side + "_bond_frames/state_" + d.timestep + ".json");
           var origin  = [0, 0];
           var beta = 0;
           var startAngle = 0;
@@ -129,11 +171,18 @@
 
     // ---------------------- /web sockets ----------------------
 
+    d3.selection.prototype.moveToFront = function() {
+      return this.each(function(){
+        this.parentNode.appendChild(this);
+      });
+    };
+
     function processData(data){
         var min_x = 10000.0;
         var min_y = 10000.0;
         var max_x = 0.0;
         var max_y = 0.0;
+        beads = {}
 
         for (i = 0; i < data.length; i++) {
           p = data[i];
@@ -148,6 +197,7 @@
           } else if (p.projected.y > max_y) {
             max_y = p.projected.y;
           }
+          beads[p.id] = p;
         }
 
         var points = svg.selectAll('circle').data(data);
@@ -184,9 +234,71 @@
             .attr('cx', function(d){ return 50 + d.projected.x + Math.sqrt(min_x * min_x); })
             .attr('cy', function(d){ return 50 + d.projected.y + Math.sqrt(min_y * min_y); })
             .attr('r' , function(d){ return 2.22*bead_scale*zScale(d.rotated.z);
-                                 });
+                                 })
+            .attr('id', function(d){ return "bead_" + d.id; });
 
         points.exit().remove();
+
+        connected = 0;
+        // Draw lines connecting bonded beads
+        for (var key in beads) {
+          if (!beads[key].bond) {
+            continue;
+          }
+          next_key = (parseInt(key) + 1).toString();
+          if (!(next_key in beads)) {
+            continue;
+          }
+          if (!beads[next_key].bond) {
+            continue;
+          }
+          id0 = "#bead_" + beads[key].id;
+          id1 = "#bead_" + (beads[key].id + 1);
+          c0 = svg.select(id0);
+          c1 = svg.select(id1);
+          if (c0.size() != 1 || c1.size() != 1) {
+            // if (c0.size() == 1) {
+            //   c0.remove();
+            // } else if (c1.size() == 1) {
+            //   c1.remove();
+            // }
+            continue;
+          }
+          col = "black"
+          if (c0.attr("fill") == waterColour && c1.attr("fill") == waterColour) {
+            // c0.remove()
+            // continue;
+            col = "yellow";
+          } else if (c0.attr("fill") == oil1Colour && c1.attr("fill") == oil1Colour) {
+            // c1.remove();
+            // continue;
+            col = "green";
+          } else {
+            d3.select(id0).moveToFront();
+            d3.select(id1).moveToFront();
+          }
+          connected++;
+          c0_x = c0.attr("cx");
+          c0_y = c0.attr("cy");
+          c1_x = c1.attr("cx");
+          c1_y = c1.attr("cy");
+          eucDistance = Math.sqrt(((c0_x - c1_x) * (c0_x - c1_x)) + ((c0_y - c1_y) * (c0_y - c1_y)));
+          if (eucDistance < 200) {
+          svg.append('line')
+             .style("stroke", col)
+             .style("stroke-width", 2)
+             .attr("x1", c0_x)
+             .attr("y1", c0_y)
+             .attr("x2", c1_x)
+             .attr("y2", c1_y);
+             // connected++;
+             // console.log(eucDistance);
+             // if (connected > 1) {
+              // break;
+             // }
+          }
+        }
+        console.log(connected);
 
         svg.attr("width", function(){ return 100 + Math.sqrt(min_x * min_x) + max_x; })
            .attr("height", function() { return 100 + Math.sqrt(min_y * min_y) + max_y; });
